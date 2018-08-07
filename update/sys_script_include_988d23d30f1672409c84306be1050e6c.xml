@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_moda_morpheus_ca.SyncUtils</api_name>
+        <client_callable>true</client_callable>
+        <description/>
+        <name>SyncUtils</name>
+        <script><![CDATA[var SyncUtils = Class.create();
+SyncUtils.prototype = {
+	initialize: function() {
+	},
+	
+	type: 'SyncUtils',
+	
+	sync: function(current) {
+		// Fetch the payload and parse it
+		var parser = new global.JSON();
+		var data = parser.decode(current.payload);
+		
+		var authToken = new x_moda_morpheus_ca.LookUpUtils().fetchAccessToken();
+		var utils = new x_moda_morpheus_ca.Utils();
+		
+		// Gather up all of the unique instanceTypeIds and the layoutIds
+		var instanceTypeIds = [];
+		var layoutIds = [];
+		
+		for (var i = 0; i < data.instanceTypes.length; i++) {
+			var instanceTypeData = data.instanceTypes[i];
+			instanceTypeIds.push(instanceTypeData.id);
+			
+			for (var j = 0; j < instanceTypeData.layouts.length; j++) {
+				var layoutData = instanceTypeData.layouts[j];
+				layoutIds.push(layoutData.id);
+			}
+		}
+		
+		// Fetch the instance type, layout data
+		var jsonBody;
+		var provisionTypeIds = [];
+		if(instanceTypeIds.length > 0) {
+			jsonBody = utils.callMorpheus('x_moda_morpheus_ca.Morpheus Instance Type', authToken, {
+				ids: instanceTypeIds,
+				layoutIds: layoutIds
+			});
+			
+			for (var i = 0; i < jsonBody.instanceTypes.length; i++) {
+				var instanceType = jsonBody.instanceTypes[i];
+				for (var key in instanceType.instanceTypeLayouts) {
+					var layout = instanceType.instanceTypeLayouts[key];
+					
+					// Store off the provisionType.. required for the cloud sync step
+					provisionTypeIds.push(layout.provisionType.id);
+				}
+			}
+		}
+		
+		provisionTypeIds = utils.uniqueArray(provisionTypeIds);
+		
+		// Sync the zones
+		for (var i = 0; i < data.sites.length; i++) {
+			var site = data.sites[i];
+			
+			for (var j = 0; j < site.zones.length; j++) {
+				var zoneId = site.zones[j].id;
+				
+				var zoneBody = utils.callMorpheus('x_moda_morpheus_ca.Morpheus Zone', authToken, {id: zoneId});
+					var zoneTypeBody = utils.callMorpheus('x_moda_morpheus_ca.Morpheus Zone Type', authToken, {id: zoneBody.zone.zoneTypeId});
+						
+						// For each provision type for this zone type that we need to sync.. sync
+						for (var k = 0; k < zoneTypeBody.zoneType.provisionTypes.length; k++) {
+							var provisionTypeId = zoneTypeBody.zoneType.provisionTypes[k];
+							if (provisionTypeIds.indexOf(provisionTypeId) != -1) {
+								utils.syncZoneProvisionType(authToken, site, zoneBody, provisionTypeId);
+							} else {
+								gs.debug('skipping ' + provisionTypeId + ' for cloud ' + zoneId);
+							}
+						}
+					}
+				}
+				
+				// Sync the Option Types for each Instance Type
+				if(typeof(jsonBody) !== 'undefined') {
+					for (var i = 0; i < jsonBody.instanceTypes.length; i++) {
+						var instanceType = jsonBody.instanceTypes[i];
+						utils.syncInstanceTypeOptions(authToken, instanceType);
+					}
+				}
+		
+				// Sync the Option Types for each Layout
+				if (typeof(jsonBody) !== 'undefined') {
+					for (var i = 0; i < jsonBody.instanceTypes.length; i++) {
+						var instanceType = jsonBody.instanceTypes[i];
+						for (var j = 0; j < instanceType.instanceTypeLayouts.length; j++) {
+							utils.syncLayoutOptions(authToken, instanceType.instanceTypeLayouts[j]);
+						}
+					}
+				}
+				
+				// Zones have been sync'd.. now sync the catalog
+				utils.createCommonRecords();
+				var masterLayoutIds = [];
+				if(typeof(jsonBody) !== 'undefined') {
+					for (var i = 0; i < jsonBody.instanceTypes.length; i++) {
+						var instanceType = jsonBody.instanceTypes[i];
+						for (var key in instanceType.instanceTypeLayouts) {
+							var layout = instanceType.instanceTypeLayouts[key];
+							masterLayoutIds.push(layout.id.toString());
+							utils.getLocalMorpheusCatItem(instanceType, layout);
+						}
+					}
+				}
+		
+				gs.info("About to deactive catalog items");
+				// Deactivate any catalog items which are not part of the sync payload
+				var tmpRecord = new GlideRecord('item_option_new');
+				tmpRecord.addQuery('sys_scope', utils.getScopeId());
+				tmpRecord.addQuery('name', 'layout_id');
+				tmpRecord.addQuery('default_value', 'NOT IN', masterLayoutIds);
+				tmpRecord.query();
+				var sysIdsToCheck = [];
+				while (tmpRecord.next()) {
+					sysIdsToCheck.push(tmpRecord.getValue('cat_item'));
+				}
+				sysIdsToCheck = utils.uniqueArray(sysIdsToCheck);
+				for (var i = 0; i < sysIdsToCheck.length; i++) {
+					var sysIdToDeactivate = sysIdsToCheck[i];
+					var catItem = utils.getRecord('sc_cat_item', {sys_id: sysIdToDeactivate});
+					if(catItem.sys_id && catItem.active == true) {
+						gs.debug("Found " + catItem.name + " and it is still active... deactivating");
+						catItem.active = false;
+						catItem.update();
+					}
+				}
+			}
+		};]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-04-28 22:03:12</sys_created_on>
+        <sys_customer_update>false</sys_customer_update>
+        <sys_id>988d23d30f1672409c84306be1050e6c</sys_id>
+        <sys_mod_count>9</sys_mod_count>
+        <sys_name>SyncUtils</sys_name>
+        <sys_package display_value="Morpheus Catalog" source="x_moda_morpheus_ca">8d8b6bbf0ff07e009c84306be1050e67</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+        <sys_scope display_value="Morpheus Catalog">8d8b6bbf0ff07e009c84306be1050e67</sys_scope>
+        <sys_update_name>sys_script_include_988d23d30f1672409c84306be1050e6c</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2018-07-02 18:31:01</sys_updated_on>
+    </sys_script_include>
+</record_update>

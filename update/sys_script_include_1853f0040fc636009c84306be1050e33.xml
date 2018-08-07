@@ -1,0 +1,932 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_moda_morpheus_ca.Utils</api_name>
+        <client_callable>true</client_callable>
+        <description/>
+        <name>Utils</name>
+        <script><![CDATA[var Utils = Class.create();
+Utils.prototype = Object.extendsObject(global.AbstractAjaxProcessor, {
+
+	type: 'Utils',
+	scopeId: '',
+
+	getScopeId: function() {
+		if(this.scopeId == '') {
+			// First look in sys_store_app (for installations)
+			var gr = new GlideRecord('sys_store_app');
+			gr.addQuery('name', 'Morpheus Catalog');
+			gr.query();
+			if(gr.next()) {
+				this.scopeId = gr.sys_id.toString();
+			}
+		}
+		if (this.scopeId == '') {
+			// Second.. look in sys_app (for development)
+			var gr = new GlideRecord('sys_app');
+			gr.addQuery('name','Morpheus Catalog');
+			gr.query();
+			gr.next();
+			this.scopeId = gr.sys_id.toString();
+		}
+		return this.scopeId;
+	},
+
+	getApplicationVersion: function() {
+		var appVersion = '';
+
+		// First look in sys_store_app (for installations)
+		var gr = new GlideRecord('sys_store_app');
+		gr.addQuery('name', 'Morpheus Catalog');
+		gr.query();
+		if(gr.next()) {
+			appVersion = gr.version.toString();
+		}
+
+		if (appVersion == '') {
+			// Second.. look in sys_app (for development)
+			var gr = new GlideRecord('sys_app');
+			gr.addQuery('name','Morpheus Catalog');
+			gr.query();
+			gr.next();
+			appVersion = gr.version.toString();
+		}
+		return appVersion;
+	},
+
+	provisionWorkflowSysId: '',
+	getProvisionWorkflowSysId: function() {
+		if(this.provisionWorkflowSysId == '') {
+			var gr = new GlideRecord('wf_workflow');
+			gr.addQuery('sys_scope',this.getScopeId());
+			gr.addQuery('sys_name','Morpheus - Provision Instance');
+			gr.query();
+			gr.next();
+			this.provisionWorkflowSysId = gr.sys_id.toString();
+		}
+		return this.provisionWorkflowSysId;
+	},
+
+	morpheusCategory: '',
+	getMorpheusCategory: function() {
+		if(this.morpheusCategory == '') {
+			var gr = new GlideRecord('sc_category');
+			gr.addQuery('sys_scope',this.getScopeId());
+			gr.addQuery('sys_name','Morpheus');
+			gr.query();
+			gr.next();
+			this.morpheusCategory = gr.sys_id.toString();
+		}
+		return this.morpheusCategory;
+	},
+
+	serviceCatalog: '',
+	getServiceCatalog: function() {
+		if(this.serviceCatalog == '') {
+			var gr = new GlideRecord('sc_catalog');
+			gr.addQuery('sys_name','Service Catalog');
+			gr.query();
+			gr.next();
+			this.serviceCatalog = gr.sys_id.toString();
+		}
+		return this.serviceCatalog;
+	},
+
+	getRecord: function(type, keyValueQueries) {
+		var tmpRecord = new GlideRecord(type);
+		if (type.indexOf('x_moda_morpheus') == -1) {
+			// Only need to scope non Morpheus plugin tables
+			tmpRecord.addQuery('sys_scope', this.getScopeId());
+		}
+		for (var key in keyValueQueries) {
+			tmpRecord.addQuery(key, keyValueQueries[key]);
+		}
+		tmpRecord.setLimit(1);
+		tmpRecord.query();
+		tmpRecord.next();
+
+		return tmpRecord;
+	},
+
+	getOrCreateRecordCatAPI: function (type, name, keyValueQueries, updateValues) {
+		gs.debug('getOrCreateRecordCatAPI: ' + type + ', name: ' + name);
+
+		var existingRecord = this.getRecord(type, keyValueQueries);
+		var newRecord = !existingRecord.sys_id;
+
+		// Create the sn_sc object with defining attributes
+		var tmpRecord;
+		switch(type) {
+			case 'sc_cat_item':
+				if(newRecord) {
+					tmpRecord = new sn_sc.CatItem();
+				} else {
+					tmpRecord = new sn_sc.CatItem(existingRecord.sys_id);
+				}
+				break;
+			case 'item_option_new':
+				if(newRecord) {
+					tmpRecord = new sn_sc.CatalogItemVariable();
+				} else {
+					tmpRecord = new sn_sc.CatalogItemVariable(existingRecord.sys_id);
+				}
+				break;
+			case 'item_option_new_set':
+				if(newRecord) {
+					tmpRecord = new sn_sc.CatalogItemVariableSet();
+				} else {
+					tmpRecord = new sn_sc.CatalogItemVariableSet(existingRecord.sys_id);
+				}
+				break;
+
+			default:
+				break;
+		}
+
+		updateValues['sys_scope'] = this.getScopeId();
+		updateValues['name'] = name;
+
+		// Determine if this is an update or a create
+		if(newRecord) {
+			gs.debug("Did not find " + type + ", " + name + ", creating...");
+			tmpRecord.setAttributes(updateValues);
+			tmpRecord.create();
+		} else {
+			tmpRecord.update(updateValues, false);
+		}
+
+		return this.getRecord(type, keyValueQueries);
+	},
+
+	getOrCreateRecord: function (type, name, keyValueQueries, updateValues) {
+		gs.debug('getOrCreateRecord: ' + type + ', name: ' + name);
+		if(type == 'sc_cat_item' || type == 'item_option_new' || type == 'item_option_new_set') {
+			return this.getOrCreateRecordCatAPI(type, name, keyValueQueries, updateValues);
+		} else {
+			var useSysScope = false;
+			var tmpRecord = new GlideRecord(type);
+			if (type.indexOf('x_moda_morpheus') == -1) {
+				// Only need to scope non Morpheus plugin tables
+				useSysScope = true;
+				tmpRecord.addQuery('sys_scope', this.getScopeId());
+			}
+			for (var key in keyValueQueries) {
+				tmpRecord.addQuery(key, keyValueQueries[key]);
+			}
+			tmpRecord.setLimit(1);
+			tmpRecord.query();
+			tmpRecord.next();
+
+			if (!tmpRecord.sys_id) {
+				gs.debug('did NOT find ' + name);
+				tmpRecord.initialize();
+				tmpRecord.name = name;
+				if (useSysScope == true) {
+					tmpRecord.sys_scope = this.getScopeId();
+				}
+				tmpRecord.insert();
+
+			}
+
+			if (typeof(updateValues) !== 'undefined') {
+				var updateRequired = false;
+				for (var key in updateValues) {
+					if (tmpRecord[key] != updateValues[key]) {
+						gs.debug('Value ' + key + ' for record ' + type + ' needs to be updated to ' + updateValues[key] + ' from ' + tmpRecord[key]);
+						updateRequired = true;
+						tmpRecord[key] = updateValues[key];
+					}
+				}
+
+				if (updateRequired == true) {
+					tmpRecord.update();
+				}
+			}
+
+			return tmpRecord;
+		}
+	},
+
+	createCommonRecords: function() {
+		var scopeId = this.getScopeId();
+		// First need a common variable set
+		var varSetName = 'Morpheus Common';
+		var varSetNameUpdateMap = {
+			description: 'Common Morpheus Variables (shared across instances)',
+			sys_scope: scopeId,
+			order: 10
+		};
+		var varSet = this.getOrCreateRecord('item_option_new_set', varSetName, {name: varSetName}, varSetNameUpdateMap);
+
+		// Name
+		var varName = 'name';
+		var varUpdateSet = {
+			sys_scope: scopeId,
+			variable_set: varSet.sys_id,
+			type: '6',
+			order: 1,
+			mandatory: true,
+			question_text: 'Name'
+		};
+		this.getOrCreateRecord('item_option_new', varName, {name: varName}, varUpdateSet);
+
+		// Group
+		var varGroup = 'group';
+		var varGroupUpdateSet = {
+			sys_scope: scopeId,
+			variable_set: varSet.sys_id,
+			type: '8',
+			order: 50,
+			mandatory: true,
+			question_text: 'Group',
+			reference: 'x_moda_morpheus_ca_group',
+			lookup_table: 'x_moda_morpheus_ca_group',
+			lookup_value: 'name'
+		};
+		this.getOrCreateRecord('item_option_new', varGroup, {name: varGroup}, varGroupUpdateSet);
+
+		// Cloud
+		var varCloud = 'cloud';
+		var varCloudUpdateSet = {
+			sys_scope: scopeId,
+			variable_set: varSet.sys_id,
+			type: '8',
+			order: 100,
+			mandatory: true,
+			question_text: 'Cloud',
+			reference: 'x_moda_morpheus_ca_clouds',
+			lookup_table: 'x_moda_morpheus_ca_clouds',
+			lookup_value: 'name',
+			choice_table: 'x_moda_morpheus_ca_clouds',
+			use_reference_qualifier: 'advanced',
+			reference_qual: "javascript: new x_moda_morpheus_ca.LookUpUtils().getCloudsForGroups(current.variables.group, current.variables.provision_type);",
+			lookup_unique: false
+		};
+		this.getOrCreateRecord('item_option_new', varCloud, {name: varCloud}, varCloudUpdateSet);
+
+		// ServicePlan
+		var varPlan = 'serviceplan';
+		var varPlanUpdateSet = {
+			sys_scope: scopeId,
+			variable_set: varSet.sys_id,
+			type: '8',
+			order: 200,
+			mandatory: true,
+			question_text: 'Service Plan',
+			reference: 'x_moda_morpheus_ca_service_plans',
+			lookup_table: 'x_moda_morpheus_ca_service_plans',
+			lookup_value: 'name',
+			choice_table: 'x_moda_morpheus_ca_service_plans',
+			use_reference_qualifier: 'advanced',
+			reference_qual: "javascript: new x_moda_morpheus_ca.LookUpUtils().getServicePlans(current.variables.cloud, current.variables.provision_type);",
+			lookup_unique: false
+		};
+		this.getOrCreateRecord('item_option_new', varPlan, {name: varPlan}, varPlanUpdateSet);
+	},
+
+	setupModelForOptionTypes: function(scopeCode, provisionTypeCode, variableSet, optionArray, layoutId) {
+		var scopeId = this.getScopeId();
+
+		for (var i = 0; i < optionArray.length; i++) {
+			var data = optionArray[i];
+
+			var varTmpName = 'optiontype_' + data.fieldName + '_' + scopeCode;
+			var varTmpUpdateSet;
+
+			switch (data.type) {
+				case 'select':
+					varTmpUpdateSet = {
+						sys_scope: scopeId,
+						variable_set: variableSet.sys_id,
+						type: '8',
+						order: 500,
+						mandatory: data.required,
+						question_text: data.fieldLabel,
+						field: data.fieldContext,
+						reference: 'x_moda_morpheus_ca_lookup_values_cloud',
+						use_reference_qualifier: 'advanced',
+						reference_qual: "javascript: new x_moda_morpheus_ca.LookUpUtils().getLookupValues(current.variables.cloud, '" + provisionTypeCode + "', '" + data.fieldName + "');",
+						lookup_unique: false
+					};
+					// Special handling for layout option types
+					if(typeof(layoutId) != 'undefined') {
+						varTmpUpdateSet.reference = 'x_moda_morpheus_ca_lookup_values_layout';
+						varTmpUpdateSet.reference_qual = "javascript: new x_moda_morpheus_ca.LookUpUtils().getLookupValuesLayout(" + layoutId.toString() + ", '" + data.fieldName + "');";
+					}
+					this.getOrCreateRecord('item_option_new', varTmpName, {name: varTmpName}, varTmpUpdateSet);
+					break;
+				case 'password':
+					varTmpUpdateSet = {
+						sys_scope: scopeId,
+						variable_set: variableSet.sys_id,
+						type: '25',
+						order: 500,
+						mandatory: data.required,
+						question_text: data.fieldLabel,
+						field: data.fieldContext
+					};
+					this.getOrCreateRecord('item_option_new', varTmpName, {name: varTmpName}, varTmpUpdateSet);
+					break;
+				case 'checkbox':
+					varTmpUpdateSet = {
+						sys_scope: scopeId,
+						variable_set: variableSet.sys_id,
+						type: '7',
+						order: 500,
+						mandatory: data.required,
+						question_text: data.fieldLabel,
+						field: data.fieldContext,
+						default_value: ((data.defaultValue != '' && typeof(data.defaultValue) != 'undefined') ? data.defaultValue : null)
+					};
+					this.getOrCreateRecord('item_option_new', varTmpName, {name: varTmpName}, varTmpUpdateSet);
+					break;
+				case 'number':
+				case 'text':
+				default:
+					varTmpUpdateSet = {
+						sys_scope: scopeId,
+						variable_set: variableSet.sys_id,
+						type: '6',
+						order: 500,
+						mandatory: data.required,
+						question_text: data.fieldLabel,
+						field: data.fieldContext,
+						default_value: ((data.defaultValue != '' && typeof(data.defaultValue) != 'undefined') ? data.defaultValue : null)
+					};
+					this.getOrCreateRecord('item_option_new', varTmpName, {name: varTmpName}, varTmpUpdateSet);
+			}
+		}
+	},
+
+	getLocalMorpheusCatItem: function (instanceType, layout) {
+		var layoutId = layout.id;
+		var provisionTypeCode = layout.provisionType.code;
+		var scopeId = this.getScopeId();
+
+		// Need to find the catalog item by the layout_id variable associated to it
+		var catItem;
+		var catItemName = instanceType.name + '-' + layout.name + '-' + layout.instanceVersion;
+		var catItemUpdateMap = {
+			workflow: this.getProvisionWorkflowSysId(),
+			category: this.getMorpheusCategory(),
+			short_description: 'Provision ' + instanceType.name + ' on ' + layout.provisionType.name,
+			sys_scope: scopeId,
+			sc_catalogs: this.getServiceCatalog(),
+			active: true
+		};
+
+		var layoutName = 'layout_id';
+		var tmpLayoutIdVar = this.getRecord('item_option_new', {name: layoutName, default_value: layoutId.toString()});
+		var catItemSysId = typeof(tmpLayoutIdVar.cat_item) != 'undefined' ? tmpLayoutIdVar.cat_item.sys_id : undefined;
+		if (typeof(tmpLayoutIdVar.sys_id) != 'undefined' && typeof(catItemSysId) != 'undefined' && this.getRecord('sc_cat_item', {sys_id: catItemSysId}).sys_id ) {
+			catItem = this.getOrCreateRecord('sc_cat_item', catItemName, {sys_id: catItemSysId}, catItemUpdateMap);
+		} else {
+			catItem = this.getOrCreateRecord('sc_cat_item', catItemName, {name: catItemName}, catItemUpdateMap);
+		}
+
+		// Make sure the hidden variable set has ALL of the hidden variables (one for provision type, one for instancetype)
+		var provTypeName = 'provision_type';
+		var provTypeUpdateSet = {
+			cat_item: catItem.sys_id,
+			sys_scope: scopeId,
+			default_value: provisionTypeCode,
+			question_text: 'Provision Type',
+			order: 1000
+		};
+		this.getOrCreateRecord('item_option_new', provTypeName, {name: provTypeName, cat_item: catItem.sys_id}, provTypeUpdateSet);
+
+		var instanceTypeName = 'instance_type';
+		var instanceTypeUpdateSet = {
+			cat_item: catItem.sys_id,
+			sys_scope: scopeId,
+			default_value: instanceType.code,
+			question_text: 'Instance Type',
+			order: 1100
+		};
+		this.getOrCreateRecord('item_option_new', instanceTypeName, {name: instanceTypeName, cat_item: catItem.sys_id}, instanceTypeUpdateSet);
+
+		var layoutName = 'layout_id';
+		var layoutUpdateSet = {
+			cat_item: catItem.sys_id,
+			sys_scope: scopeId,
+			default_value: layoutId.toString(),
+			question_text: 'Layout Id',
+			order: 1200
+		};
+		this.getOrCreateRecord('item_option_new', layoutName, {name: layoutName, cat_item: catItem.sys_id}, layoutUpdateSet);
+
+		//Add a script to hide the internal variables
+		var scriptName = 'Morpheus ClientScript ' + layoutId;
+		var scriptBody = "function onLoad() { g_form.setVisible('layout_id', false); g_form.setVisible('provision_type', false); g_form.setVisible('instance_type', false);}";
+		var scriptUpdateSet = {
+			global: true,
+			type: 'onLoad',
+			cat_item: catItem.sys_id,
+			sys_scope: scopeId,
+			script: scriptBody,
+			applies_catalog: true,
+			applies_to: 'item'
+		};
+		this.getOrCreateRecord('catalog_script_client', scriptName, {name: scriptName}, scriptUpdateSet);
+
+		// Relate the Common Var Set to the cat_item
+		var varSet = this.getRecord('item_option_new_set', {name: 'Morpheus Common'});
+		// ... and it is added to the catalog item
+		varSetRelationshipMap = {sc_cat_item: catItem.sys_id, variable_set: varSet.sys_id, sys_scope: scopeId};
+		varSetUpdatedRelationshipMap = {
+			sc_cat_item: catItem.sys_id,
+			variable_set: varSet.sys_id,
+			sys_scope: scopeId,
+			order: 10
+		};
+		varSetRelationship = this.getOrCreateRecord('io_set_item', '', varSetRelationshipMap, varSetUpdatedRelationshipMap);
+
+		// Need a variable set for the provision type - option types
+		varSetName = 'ProvType - ' + layout.provisionType.code;
+		varSetNameUpdateMap = {
+			description: 'Provision Type - Option Types for ' + provisionTypeCode,
+			sys_scope: scopeId,
+			order: 400
+		};
+		varSet = this.getOrCreateRecord('item_option_new_set', varSetName, {name: varSetName}, varSetNameUpdateMap);
+		// ... and make sure it is added to the catalog item
+		varSetRelationshipMap = {sc_cat_item: catItem.sys_id, variable_set: varSet.sys_id, sys_scope: scopeId};
+		varSetUpdatedRelationshipMap = {
+			sc_cat_item: catItem.sys_id,
+			variable_set: varSet.sys_id,
+			sys_scope: scopeId,
+			order: 410
+		};
+		varSetRelationship = this.getOrCreateRecord('io_set_item', '', varSetRelationshipMap, varSetUpdatedRelationshipMap);
+
+		// Add a network (if configured)
+		if (layout.provisionType.hasNetworks == true) {
+			var varNetwork = 'network';
+			var varNetworkUpdateSet = {
+				sys_scope: scopeId,
+				variable_set: varSet.sys_id,
+				type: '8',
+				order: 300,
+				mandatory: true,
+				question_text: 'Network',
+				reference: 'x_moda_morpheus_ca_network',
+				use_reference_qualifier: 'advanced',
+				reference_qual: "javascript: new x_moda_morpheus_ca.LookUpUtils().getNetworksForCloud(current.variables.cloud, '" + provisionTypeCode + "');",
+				lookup_unique: false
+			};
+			this.getOrCreateRecord('item_option_new', varNetwork, {name: varNetwork, variable_set: varSet.sys_id}, varNetworkUpdateSet);
+		}
+
+		// Add a datastore (if configured)
+		if (layout.provisionType.hasDatastore == true) {
+			var varDatastore = 'datastore';
+			var varDatastoreUpdateSet = {
+				sys_scope: scopeId,
+				variable_set: varSet.sys_id,
+				type: '8',
+				order: 310,
+				mandatory: true,
+				question_text: 'Datastore',
+				reference: 'x_moda_morpheus_ca_datastore',
+				use_reference_qualifier: 'advanced',
+				reference_qual: "javascript: new x_moda_morpheus_ca.LookUpUtils().getDatastoresForCloud(current.variables.cloud, '" + provisionTypeCode + "');",
+				lookup_unique: false
+			};
+			this.getOrCreateRecord('item_option_new', varDatastore, {name: varDatastore, variable_set: varSet.sys_id}, varDatastoreUpdateSet);
+		}
+
+		// Disk size (if configured)
+		if(layout.provisionType.rootDiskCustomizable == true && layout.provisionType.code != 'docker') {
+			var varDisk = 'disksize';
+			var varDiskUpdateSet = {
+				sys_scope: scopeId,
+				variable_set: varSet.sys_id,
+				type: '6',
+				order: 10,
+				mandatory: true,
+				question_text: 'Disk Size (GB)'
+			};
+			this.getOrCreateRecord('item_option_new', varDisk, {name: varDisk, variable_set: varSet.sys_id}, varDiskUpdateSet);
+		}
+
+		this.setupModelForOptionTypes(provisionTypeCode, provisionTypeCode, varSet, layout.provisionType.optionTypes, undefined)
+
+		// Need a variable set for the option types (on the InstanceTypeLayout)
+		var layoutCode = layout.code;
+		var optionTypeVarSetName = 'opt-' + layoutCode;
+		varSetNameUpdateMap = {
+			description: 'Option Type - Option Types for ' + layoutCode,
+			sys_scope: scopeId,
+			order: 400
+		};
+		var optionTypeVarSet = this.getOrCreateRecord('item_option_new_set', optionTypeVarSetName, {name: optionTypeVarSetName}, varSetNameUpdateMap);
+		// ... and make sure it is added to the catalog item
+		varSetRelationshipMap = {sc_cat_item: catItem.sys_id, variable_set: optionTypeVarSet.sys_id, sys_scope: scopeId};
+		varSetUpdatedRelationshipMap = {
+			sc_cat_item: catItem.sys_id,
+			variable_set: optionTypeVarSet.sys_id,
+			sys_scope: scopeId,
+			order: 410
+		};
+		varSetRelationship = this.getOrCreateRecord('io_set_item', '', varSetRelationshipMap, varSetUpdatedRelationshipMap);
+		this.setupModelForOptionTypes(layoutCode, provisionTypeCode, optionTypeVarSet, layout.optionTypes, layoutId)
+
+		// Need a variable set for the option types (on the InstanceType)
+		var instanceTypeCode = instanceType.code;
+		optionTypeVarSetName = 'opt-' + instanceTypeCode;
+		varSetNameUpdateMap = {
+			description: 'Option Type - Option Types for ' + instanceTypeCode,
+			sys_scope: scopeId,
+			order: 400
+		};
+		optionTypeVarSet = this.getOrCreateRecord('item_option_new_set', optionTypeVarSetName, {name: optionTypeVarSetName}, varSetNameUpdateMap);
+		// ... and make sure it is added to the catalog item
+		varSetRelationshipMap = {sc_cat_item: catItem.sys_id, variable_set: optionTypeVarSet.sys_id, sys_scope: scopeId};
+		varSetUpdatedRelationshipMap = {
+			sc_cat_item: catItem.sys_id,
+			variable_set: optionTypeVarSet.sys_id,
+			sys_scope: scopeId,
+			order: 410
+		};
+		varSetRelationship = this.getOrCreateRecord('io_set_item', '', varSetRelationshipMap, varSetUpdatedRelationshipMap);
+		this.setupModelForOptionTypes(instanceTypeCode, provisionTypeCode, optionTypeVarSet, instanceType.optionTypes, undefined)
+
+		return catItem;
+	},
+
+	syncZoneProvisionType: function (authToken, site, zoneBody, provisionTypeId) {
+		try {
+			var zone = zoneBody.zone;
+			var zoneId = zone.id;
+			gs.info('Syncing provisiontype:' + provisionTypeId + ' for cloud:' + zoneId + ', in site:' + site.id);
+
+			// Group
+			var snGroup = this.getOrCreateRecord('x_moda_morpheus_ca_group', site.name, {external_id: site.id.toString()}, {
+				name: site.name,
+				external_id: site.id.toString()
+			});
+
+			// Handle the cloud record
+			var snCloud = this.getOrCreateRecord('x_moda_morpheus_ca_clouds', zone.name, {external_id: zone.id}, {
+				name: zone.name,
+				external_id: zone.id,
+				region_code: zone.regionCode
+			});
+
+			// Relate the group - cloud
+			this.getOrCreateRecord('x_moda_morpheus_ca_m2m_clouds_groups', '', {
+				clouds: snCloud.sys_id,
+				group: snGroup.sys_id
+			}, {clouds: snCloud.sys_id, group: snGroup.sys_id});
+
+			// Provision Type
+			var provisionTypeBody = this.callMorpheus('x_moda_morpheus_ca.Morpheus Provision Type', authToken, {id: provisionTypeId});
+			var provisionType = provisionTypeBody.provisionType;
+			// Find the 'first' root storage volume type
+			var rootstoragevolumetypeid, displayIdx;
+			for (var i = 0; i < provisionType.rootStorageTypes.length; i++) {
+				var rootStorageType = provisionType.rootStorageTypes[i];
+				if (typeof(displayIdx) == 'undefined' || parseInt(rootStorageType.displayOrder) < displayIdx) {
+					displayIdx = parseInt(rootStorageType.displayOrder);
+					rootstoragevolumetypeid = rootStorageType.id;
+				}
+			}
+			var snProvisionType = this.getOrCreateRecord('x_moda_morpheus_ca_provision_type', provisionType.name, {externalid: provisionType.code}, {
+				name: provisionType.name,
+				externalid: provisionType.code,
+				rootstoragevolumetypeid: (typeof(rootstoragevolumetypeid) != 'undefined' ? rootstoragevolumetypeid.toString() : '')
+			});
+
+			// Relate the cloud - provision type
+			this.getOrCreateRecord('x_moda_morpheus_ca_m2m_provision_types_clouds', '', {
+				clouds: snCloud.sys_id,
+				provision_type: snProvisionType.sys_id
+			}, {clouds: snCloud.sys_id, provision_type: snProvisionType.sys_id});
+
+			// Sync the option types for the provision type
+			for (var i = 0; i < provisionType.optionTypes.length; i++) {
+				var data = provisionType.optionTypes[i];
+
+				switch (data.type) {
+					case 'select':
+						gs.debug('Syncing: ' + data.name + ' for cloud ' + zoneId);
+						var optionsBody = this.callMorpheus('x_moda_morpheus_ca.Morpheus Option Source', authToken, {
+							optionSource: data.optionSource,
+							zoneId: zoneId.toString()
+						});
+						if (optionsBody.success == true) {
+							var masterExternalIds = [];
+
+							// Perform all of the updates
+							for (var j = 0; j < optionsBody.data.length; j++) {
+								var optionData = optionsBody.data[j];
+								var optionDataQuery = {
+									name: optionData.name,
+									cloud: snCloud.sys_id,
+									provision_type: snProvisionType.sys_id,
+									type: data.fieldName
+								};
+								var optionDataUpdate = {};
+								for (var k in optionDataQuery) {
+									optionDataUpdate[k] = optionDataQuery[k];
+								}
+								optionDataUpdate.value = optionData.value != null ? optionData.value.toString() : '';
+
+								masterExternalIds.push(optionDataQuery.name);
+								this.getOrCreateRecord('x_moda_morpheus_ca_lookup_values_cloud', '', optionDataQuery, optionDataUpdate);
+							}
+
+							// Clean up any items that need to be removed
+							var grCloudValues = new GlideRecord('x_moda_morpheus_ca_lookup_values_cloud');
+							grCloudValues.addQuery('cloud', snCloud.sys_id);
+							grCloudValues.addQuery('provision_type', snProvisionType.sys_id);
+							grCloudValues.addQuery('type', data.fieldName);
+							grCloudValues.addQuery('name', 'NOT IN', masterExternalIds);
+							grCloudValues.deleteMultiple();
+						}
+						break;
+					default:
+					// Do nothing
+				}
+			}
+
+			// Sync the networks
+			if (provisionType.hasNetworks == true) {
+				var networksBody = this.callMorpheus('x_moda_morpheus_ca.Morpheus Zone Network', authToken, {
+					provisionTypeId: provisionTypeId,
+					zoneId: zoneId.toString()
+				});
+				if (networksBody.success == true) {
+					var masterExternalIds = [];
+
+					// Perform all of the updates
+					for (var i = 0; i < networksBody.data.networks.length; i++) {
+						var networkData = networksBody.data.networks[i];
+						var networkQuery = {
+							externalid: networkData.id.toString(),
+							cloud: snCloud.sys_id,
+							provision_type: snProvisionType.sys_id
+						};
+						var networkUpdateQuery = {
+							name: networkData.name,
+							externalid: networkData.id.toString(),
+							cloud: snCloud.sys_id,
+							provision_type: snProvisionType.sys_id
+						};
+						masterExternalIds.push(networkData.id.toString());
+						this.getOrCreateRecord('x_moda_morpheus_ca_network', '', networkQuery, networkUpdateQuery);
+					}
+					// Clean up any items that need to be removed
+					var grNetwork = new GlideRecord('x_moda_morpheus_ca_network');
+					grNetwork.addQuery('cloud', snCloud.sys_id);
+					grNetwork.addQuery('externalid', 'NOT IN', masterExternalIds);
+					grNetwork.deleteMultiple();
+				}
+			}
+
+			// Sync the datastores
+			if (provisionType.hasDatastore == true) {
+				var datastoresBody = this.callMorpheus('x_moda_morpheus_ca.Morpheus Zone Datastore', authToken, {
+					zoneId: zoneId.toString()
+				});
+				if (datastoresBody.success == true) {
+					var masterExternalIds = [];
+
+					// Perform all of the updates
+					for (var i = 0; i < datastoresBody.data.length; i++) {
+						var datastoreData = datastoresBody.data[i];
+						var datastoreQuery = {
+							external_id: datastoreData.id.toString(),
+							cloud: snCloud.sys_id,
+							provision_type: snProvisionType.sys_id
+						};
+						var datastoreUpdateQuery = {
+							name: datastoreData.name,
+							external_id: datastoreData.id.toString(),
+							cloud: snCloud.sys_id,
+							provision_type: snProvisionType.sys_id
+						};
+						masterExternalIds.push(datastoreData.id.toString());
+						this.getOrCreateRecord('x_moda_morpheus_ca_datastore', '', datastoreQuery, datastoreUpdateQuery);
+					}
+					// Clean up any items that need to be removed
+					var grDatastore = new GlideRecord('x_moda_morpheus_ca_datastore');
+					grDatastore.addQuery('cloud', snCloud.sys_id);
+					grDatastore.addQuery('external_id', 'NOT IN', masterExternalIds);
+					grDatastore.deleteMultiple();
+				}
+			}
+
+
+			// Sync the service plans for the provision type
+			var masterServicePlanExternalIds = [];
+			var servicePlansBody = this.callMorpheus('x_moda_morpheus_ca.Morpheus Service Plans', authToken, {provisionTypeId: provisionTypeId});
+			for (var i = 0; i < servicePlansBody.servicePlans.length; i++) {
+				var servicePlanData = servicePlansBody.servicePlans[i];
+				var servicePlanQuery = {external_id: servicePlanData.id.toString(), provision_type: snProvisionType.sys_id};
+
+				var servicePlanUpdate = {};
+				for (var j in servicePlanQuery) {
+					servicePlanUpdate[j] = servicePlanQuery[j];
+				}
+
+				servicePlanUpdate.name = servicePlanData.name;
+				servicePlanUpdate.order = servicePlanData.id;
+				servicePlanUpdate.region_code = servicePlanData.regionCode;
+
+				masterServicePlanExternalIds.push(servicePlanQuery.external_id);
+				this.getOrCreateRecord('x_moda_morpheus_ca_service_plans', servicePlanData.name, servicePlanQuery, servicePlanUpdate);
+			}
+			// Clean up any service plans that need to be removed
+			var grDatastore = new GlideRecord('x_moda_morpheus_ca_service_plans');
+			grDatastore.addQuery('provision_type', snProvisionType.sys_id);
+			grDatastore.addQuery('external_id', 'NOT IN', masterServicePlanExternalIds);
+			grDatastore.deleteMultiple();
+		} catch(err) {
+			gs.error('Error in syncZoneProvisionType: ' + err.stack);
+		}
+	},
+
+	syncInstanceTypeOptions: function (authToken, instanceType) {
+		gs.info('Syncing instanceType options:' + instanceType.code);
+
+		var utils = this;
+		var instanceTypeId = instanceType.id;
+		for (var i = 0; i < instanceType.optionTypes.length; i++) {
+			var data = instanceType.optionTypes[i];
+
+			switch (data.type) {
+				case 'select':
+
+					// Need to obtain the select values for EVERY type of provision type available for this instance Type
+					var provisionTypeCodes = [];
+					// First, gather up all the provision types possible for this instance type
+					for (var j = 0; j < instanceType.instanceTypeLayouts.length; j++) {
+						var itl = instanceType.instanceTypeLayouts[j];
+						provisionTypeCodes.push(itl.provisionType.code);
+					}
+					provisionTypeCodes = utils.uniqueArray(provisionTypeCodes);
+
+					// Second, for each cloud we sync of this type.. fetch the options available
+					var gr = new GlideRecord('x_moda_morpheus_ca_m2m_provision_types_clouds');
+					gr.addQuery('provision_type.externalid', 'IN', provisionTypeCodes);
+					gr.query();
+					while (gr.next()) {
+						gs.debug('Working on cloud: ' + gr.clouds.name + ', for zone: ' + gr.clouds.external_id + ' for optionSource: ' + data.optionSource);
+
+						var optionsBody = this.callMorpheus('x_moda_morpheus_ca.Morpheus Option Source', authToken, {
+							optionSource: data.optionSource,
+							zoneId: gr.clouds.external_id.toString()
+						});
+						if (optionsBody.success == true) {
+							var masterExternalIds = [];
+
+							// Perform all of the updates
+							for (var j = 0; j < optionsBody.data.length; j++) {
+								var optionData = optionsBody.data[j];
+								var optionDataQuery = {
+									name: optionData.name,
+									cloud: gr.getValue('clouds'),
+									provision_type: gr.getValue('provision_type'),
+									type: data.fieldName
+								};
+								var optionDataUpdate = {};
+								for (var k in optionDataQuery) {
+									optionDataUpdate[k] = optionDataQuery[k];
+								}
+								optionDataUpdate.value = optionData.value.toString();
+
+								masterExternalIds.push(optionDataQuery.name);
+								this.getOrCreateRecord('x_moda_morpheus_ca_lookup_values_cloud', '', optionDataQuery, optionDataUpdate);
+							}
+
+							// Clean up any items that need to be removed
+							var grCloudValues = new GlideRecord('x_moda_morpheus_ca_lookup_values_cloud');
+							grCloudValues.addQuery('cloud', gr.getValue('clouds'));
+							grCloudValues.addQuery('provision_type', gr.getValue('provision_type'));
+							grCloudValues.addQuery('type', data.fieldName);
+							grCloudValues.addQuery('name', 'NOT IN', masterExternalIds);
+							grCloudValues.deleteMultiple();
+						} else {
+							gs.warn('Error getting option source ' + data.optionSource + ', for cloud id: ' + gr.external_id.toString());
+						}
+					}
+					break;
+				default:
+				// Do nothing
+			}
+		}
+	},
+
+	syncLayoutOptions: function (authToken, layout) {
+		gs.info('Syncing layout options:' + layout.code);
+
+		var utils = this;
+		var layoutId = layout.id.toString();
+		for (var i = 0; i < layout.optionTypes.length; i++) {
+			var data = layout.optionTypes[i];
+			switch (data.type) {
+				case 'select':
+
+					gs.debug('Working on layout: ' + layout.name + ', optionSource: ' + data.optionSource);
+
+					var optionsBody = this.callMorpheus('x_moda_morpheus_ca.Morpheus Option Source', authToken, {
+						optionSource: data.optionSource,
+						optionTypeId: data.id
+					});
+					if (optionsBody.success == true) {
+						var masterExternalIds = [];
+
+						// Perform all of the updates
+						for (var j = 0; j < optionsBody.data.length; j++) {
+							var optionData = optionsBody.data[j];
+							var optionDataQuery = {
+								name: optionData.name,
+								layoutid: layoutId,
+								type: data.fieldName
+							};
+							var optionDataUpdate = {};
+							for (var k in optionDataQuery) {
+								optionDataUpdate[k] = optionDataQuery[k];
+							}
+							optionDataUpdate.value = optionData.value.toString();
+
+							masterExternalIds.push(optionDataQuery.name);
+							this.getOrCreateRecord('x_moda_morpheus_ca_lookup_values_layout', '', optionDataQuery, optionDataUpdate);
+						}
+
+						// Clean up any items that need to be removed
+						var grLayoutValues = new GlideRecord('x_moda_morpheus_ca_lookup_values_layout');
+						grLayoutValues.addQuery('layoutid', layoutId);
+						grLayoutValues.addQuery('type', data.fieldName);
+						grLayoutValues.addQuery('name', 'NOT IN', masterExternalIds);
+						grLayoutValues.deleteMultiple();
+					} else {
+						gs.warn('Error getting option source ' + data.optionSource + ', for layout: ' + layout.name);
+					}
+
+					break;
+				default:
+				// Do nothing
+			}
+		}
+	},
+
+	uniqueArray: function (arr) {
+		var n = {};
+		var r = [];
+		for (var i = 0; i < arr.length; i++) {
+			if (!n[arr[i]]) {
+				n[arr[i]] = true;
+				r.push(arr[i]);
+			}
+		}
+		return r;
+	},
+
+	callMorpheus: function(message, authToken, params, method, body) {
+		if(typeof(method) == 'undefined' || method == '') {
+			method = 'get';
+		}
+		var r = new sn_ws.RESTMessageV2(message, method);
+
+		r.setStringParameterNoEscape('url', gs.getProperty('x_moda_morpheus_ca.morpheus_url'));
+		r.setStringParameterNoEscape('authToken', authToken);
+		for (var key in params) {
+			r.setStringParameterNoEscape(key, params[key]);
+		}
+
+		if(typeof(body) != 'undefined') {
+			r.setRequestBody(body);
+		}
+
+		var response = r.execute();
+		var responseBody = response.getBody();
+		var parser = new global.JSON();
+		var jsonBody = parser.decode(responseBody);
+		var httpStatus = response.getStatusCode();
+		if (httpStatus >= 400) {
+			gs.error('Error calling ' + message + ', response: ' + httpStatus + ' with body: ' + responseBody);
+		}
+
+		return jsonBody;
+	}
+});]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-04-05 19:53:21</sys_created_on>
+        <sys_customer_update>false</sys_customer_update>
+        <sys_id>1853f0040fc636009c84306be1050e33</sys_id>
+        <sys_mod_count>46</sys_mod_count>
+        <sys_name>Utils</sys_name>
+        <sys_package display_value="Morpheus Catalog" source="x_moda_morpheus_ca">8d8b6bbf0ff07e009c84306be1050e67</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+        <sys_scope display_value="Morpheus Catalog">8d8b6bbf0ff07e009c84306be1050e67</sys_scope>
+        <sys_update_name>sys_script_include_1853f0040fc636009c84306be1050e33</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2018-07-02 18:29:28</sys_updated_on>
+    </sys_script_include>
+</record_update>

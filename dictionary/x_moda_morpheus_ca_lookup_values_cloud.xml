@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<database>
+    <element label="Lookup Values Cloud" max_length="40" name="x_moda_morpheus_ca_lookup_values_cloud" type="collection">
+        <element label="Cloud" max_length="32" name="cloud" reference="x_moda_morpheus_ca_clouds" type="reference"/>
+        <element label="Name" max_length="255" name="name" type="string"/>
+        <element label="Provision Type" max_length="32" name="provision_type" reference="x_moda_morpheus_ca_provision_type" type="reference"/>
+        <element label="Type" max_length="40" name="type" type="string"/>
+        <element label="Value" max_length="512" name="value" type="string"/>
+        <index name="index">
+            <element name="cloud"/>
+        </index>
+        <index name="index2">
+            <element name="provision_type"/>
+        </index>
+    </element>
+</database>

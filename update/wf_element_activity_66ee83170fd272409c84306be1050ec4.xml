@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="wf_element_activity">
+    <wf_element_activity action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <attributes/>
+        <base_provider display_value="Run Script">d0c7fe11eb013100fc5e8a7af106fee0</base_provider>
+        <category/>
+        <checked_out_by/>
+        <default_height/>
+        <default_width/>
+        <description/>
+        <image>images/heisenberg_icons/workflow_ie8/provider_runscript.png</image>
+        <input_meta>{"name":"Input","type":"DATA_OBJECT","properties":[]}</input_meta>
+        <input_process_script/>
+        <input_transform/>
+        <local_variables/>
+        <name>Morpheus - Provision Instance</name>
+        <output_meta/>
+        <output_process_script/>
+        <output_transform/>
+        <processing_script><![CDATA[workflow.info('Logging INFO from inside a script - begin');
+
+provisionInstance();
+
+function provisionInstance() {
+	activity.result = 'success';
+	
+	var scratchpad = {};
+	
+	for (var item in workflow.inputs) {
+		scratchpad[item] = workflow.inputs[item];
+		workflow.info('saving to scratchpad: ' + item + '=' + workflow.inputs[item]);
+	}
+	
+	scratchpad.u_req_item_id = current.sys_id;
+	
+	workflow.info('u_req_item_id' + scratchpad.u_req_item_id);
+	
+	var lookupUtils = new x_moda_morpheus_ca.LookUpUtils();
+	scratchpad.access_token = lookupUtils.fetchAccessToken();
+	
+	if(scratchpad.access_token == '' || typeof(scratchpad.access_token) == 'undefined') {
+		_handleError('Error connecting to Morpheus.  Please verify connection information.');
+	} else {
+		var utils = new x_moda_morpheus_ca.Utils();
+
+		workflow.info('in provisionInstance with scratchpad: ' + scratchpad);
+
+		var grItem = new GlideRecord('sc_req_item');
+		grItem.get(scratchpad.u_req_item_id);
+
+		var grCatItem = new GlideRecord('sc_cat_item');
+		grCatItem.get(grItem.cat_item);
+
+		var grGroup = new GlideRecord('x_moda_morpheus_ca_group');
+		grGroup.get(scratchpad.group);
+
+		var grPlan = new GlideRecord('x_moda_morpheus_ca_service_plans');
+		grPlan.get(scratchpad.serviceplan);
+
+		var grProvType = new GlideRecord('x_moda_morpheus_ca_provision_type');
+		grProvType.get('externalid', scratchpad.provision_type);
+
+		var grNetwork = new GlideRecord('x_moda_morpheus_ca_network');
+		grNetwork.get(scratchpad.network);
+
+		var grDatastore = new GlideRecord('x_moda_morpheus_ca_datastore');
+		grDatastore.get(scratchpad.datastore);
+
+		gs.info('here:' + scratchpad.name);
+		// Build up the request ot Morpheus
+		var payload = {
+			instance: {
+				name: scratchpad.name.toString(),
+				site: {
+					id: parseInt(grGroup.getValue('external_id'))
+				},
+				instanceType: {
+					code: scratchpad.instance_type.toString()
+				},
+				layout: {
+					id: parseInt(scratchpad.layout_id)
+				},
+				plan: {
+					id: parseInt(grPlan.getValue('external_id'))
+				}
+			},
+			volumes: [
+				{
+					id: -1,
+					rootVolume: true,
+					name: 'root',
+					size: parseInt(scratchpad.disksize),
+					storageType: parseInt(grProvType.rootstoragevolumetypeid),
+					datastoreId: 'auto'
+
+				}
+			],
+			config: {}
+		};
+
+		// If networks are configured...
+		if(scratchpad.network != '' && typeof(scratchpad.network) != 'undefined') {
+			payload.networkInterfaces = [{
+				network: {
+					id: parseInt(grNetwork.getValue('externalid'))
+				},
+				networkInterfaceTypeId: 1
+			}];
+		}
+
+		// If datastores are configured...
+		if(scratchpad.datastore != '' && typeof(scratchpad.datastore) != 'undefined') {
+			payload.volumes[0].datastoreId = grDatastore.getValue('external_id');
+		}
+
+		// TODO : Handle networkInterfaceTypeId
+
+		// Any additional options
+		var optionPrefix = 'optiontype_';
+		for(var key in scratchpad) {
+			if(key.indexOf(optionPrefix) == 0) {
+				var lastUnderscore = key.lastIndexOf('_');
+				var configName = key.substring(optionPrefix.length, lastUnderscore);
+				var lookupSysIdOrValue = scratchpad[key];
+				if(typeof(lookupSysIdOrValue) != 'undefined' && lookupSysIdOrValue.toString() != '') {
+					var grOption = new GlideRecord('x_moda_morpheus_ca_lookup_values_cloud');
+					grOption.get(lookupSysIdOrValue);
+					if(grOption.isValidRecord()) {
+						payload.config[configName] = grOption.getValue('value');
+					} else {
+						payload.config[configName] = lookupSysIdOrValue;
+					}
+				}
+			}
+		}
+
+		var parser = new global.JSON();
+		var encodedPayload = parser.encode(payload);
+		gs.info('calling Morpheus to create instance with payload:'+ encodedPayload);
+
+		var createResultBody = utils.callMorpheus('x_moda_morpheus_ca.Morpheus Instance', scratchpad.access_token, {}, 'POST', encodedPayload);
+		if(createResultBody.success == false) {
+			var errorString = 'Error occurred with call to Morpheus: ';
+			for (var err in createResultBody.errors) {
+				errorString += err + '=' + createResultBody.errors[err] + ' ';
+			}
+			_handleError(errorString);
+		} else {
+			gs.info("Successfully created instance in Morpheus");
+		}	
+	}
+}
+
+function _handleError(msg){
+	activity.result = 'error';
+	activity.fault_description = msg;
+	
+	workflow.error('Morpheus - Provision VM: ' + msg);
+}]]></processing_script>
+        <sample_payloads>{}</sample_payloads>
+        <short_description>Provisions an instance to Morpheus</short_description>
+        <style/>
+        <sys_class_name>wf_element_activity</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-04-28 19:48:49</sys_created_on>
+        <sys_customer_update>true</sys_customer_update>
+        <sys_id>66ee83170fd272409c84306be1050ec4</sys_id>
+        <sys_mod_count>3</sys_mod_count>
+        <sys_name>Morpheus - Provision Instance</sys_name>
+        <sys_package display_value="Morpheus Catalog" source="x_moda_morpheus_ca">8d8b6bbf0ff07e009c84306be1050e67</sys_package>
+        <sys_policy/>
+        <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+        <sys_scope display_value="Morpheus Catalog">8d8b6bbf0ff07e009c84306be1050e67</sys_scope>
+        <sys_update_name>wf_element_activity_66ee83170fd272409c84306be1050ec4</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-04-28 19:50:53</sys_updated_on>
+        <version_container_id>c70f87d30fd272409c84306be1050e7f</version_container_id>
+    </wf_element_activity>
+    <sys_translated_text action="delete_multiple" query="documentkey=66ee83170fd272409c84306be1050ec4"/>
+    <wf_versionable action="INSERT_OR_UPDATE">
+        <checked_out/>
+        <checked_out_by/>
+        <published>true</published>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-04-28 19:48:49</sys_created_on>
+        <sys_id>c30f87d30fd272409c84306be1050e80</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-04-28 19:50:53</sys_updated_on>
+        <valid_from>2017-04-28 19:50:53</valid_from>
+        <valid_to/>
+        <version>1</version>
+        <version_container_id>c70f87d30fd272409c84306be1050e7f</version_container_id>
+        <wf_element_definition display_value="Morpheus - Provision Instance">66ee83170fd272409c84306be1050ec4</wf_element_definition>
+    </wf_versionable>
+    <wf_condition_default action="INSERT_OR_UPDATE">
+        <activity_definition display_value="Morpheus - Provision Instance">66ee83170fd272409c84306be1050ec4</activity_definition>
+        <condition>activity.result=='error'</condition>
+        <derived_definition/>
+        <else_flag>false</else_flag>
+        <error>false</error>
+        <event>false</event>
+        <event_name/>
+        <name>Error</name>
+        <order/>
+        <short_description/>
+        <skip_during_generate>false</skip_during_generate>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-04-28 19:50:42</sys_created_on>
+        <sys_id>134fcfd30fd272409c84306be1050e76</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-04-28 19:50:42</sys_updated_on>
+    </wf_condition_default>
+    <wf_condition_default action="INSERT_OR_UPDATE">
+        <activity_definition display_value="Morpheus - Provision Instance">66ee83170fd272409c84306be1050ec4</activity_definition>
+        <condition>activity.result=='success'</condition>
+        <derived_definition/>
+        <else_flag>false</else_flag>
+        <error>false</error>
+        <event>false</event>
+        <event_name/>
+        <name>Success</name>
+        <order/>
+        <short_description/>
+        <skip_during_generate>false</skip_during_generate>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-04-28 19:50:42</sys_created_on>
+        <sys_id>441f43170fd272409c84306be1050e41</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-04-28 19:50:42</sys_updated_on>
+    </wf_condition_default>
+    <wf_condition_default action="INSERT_OR_UPDATE">
+        <activity_definition display_value="Morpheus - Provision Instance">66ee83170fd272409c84306be1050ec4</activity_definition>
+        <condition/>
+        <derived_definition/>
+        <else_flag>true</else_flag>
+        <error>false</error>
+        <event>false</event>
+        <event_name/>
+        <name>Failure</name>
+        <order/>
+        <short_description/>
+        <skip_during_generate>false</skip_during_generate>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-04-28 19:50:42</sys_created_on>
+        <sys_id>fb5f83170fd272409c84306be1050ed1</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-04-28 19:50:42</sys_updated_on>
+    </wf_condition_default>
+</record_update>

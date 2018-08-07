@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update>
+    <sys_documentation element="region_code" label="Region Code" language="en" table="x_moda_morpheus_ca_clouds">
+        <sys_documentation action="INSERT_OR_UPDATE">
+            <element>region_code</element>
+            <help/>
+            <hint/>
+            <label>Region Code</label>
+            <language>en</language>
+            <name>x_moda_morpheus_ca_clouds</name>
+            <plural>Region Codes</plural>
+            <sys_class_name>sys_documentation</sys_class_name>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2017-04-26 14:42:08</sys_created_on>
+            <sys_customer_update>false</sys_customer_update>
+            <sys_id>43a5f72a0fdefe009c84306be1050ea7</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_name>Region Code</sys_name>
+            <sys_package display_value="Morpheus Catalog" source="x_moda_morpheus_ca">8d8b6bbf0ff07e009c84306be1050e67</sys_package>
+            <sys_policy/>
+            <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+            <sys_scope display_value="Morpheus Catalog">8d8b6bbf0ff07e009c84306be1050e67</sys_scope>
+            <sys_update_name>sys_documentation_x_moda_morpheus_ca_clouds_region_code_en</sys_update_name>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2017-04-26 14:42:08</sys_updated_on>
+            <url/>
+            <url_target/>
+        </sys_documentation>
+    </sys_documentation>
+</record_update>

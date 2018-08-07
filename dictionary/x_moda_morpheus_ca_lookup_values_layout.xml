@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<database>
+    <element label="Lookup Values Layout" max_length="40" name="x_moda_morpheus_ca_lookup_values_layout" type="collection">
+        <element label="LayoutId" max_length="255" name="layoutid" type="string"/>
+        <element label="Name" max_length="255" name="name" type="string"/>
+        <element label="Type" max_length="255" name="type" type="string"/>
+        <element label="Value" max_length="255" name="value" type="string"/>
+    </element>
+</database>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<database>
+    <element label="Service Plans" max_length="40" name="x_moda_morpheus_ca_service_plans" type="collection">
+        <element label="External ID" max_length="255" name="external_id" type="string"/>
+        <element label="Name" max_length="255" name="name" type="string"/>
+        <element label="Order" max_length="40" name="order" type="integer"/>
+        <element label="Provision Type" max_length="32" name="provision_type" reference="x_moda_morpheus_ca_provision_type" type="reference"/>
+        <element label="Region Code" max_length="255" name="region_code" type="string"/>
+        <index name="index">
+            <element name="provision_type"/>
+        </index>
+    </element>
+</database>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<database>
+    <element label="Morpheus Ca M2m Clouds Groups" max_length="40" name="x_moda_morpheus_ca_m2m_clouds_groups" type="collection">
+        <element label="Clouds" max_length="32" name="clouds" reference="x_moda_morpheus_ca_clouds" type="reference"/>
+        <element label="Group" max_length="32" name="group" reference="x_moda_morpheus_ca_group" type="reference"/>
+        <index name="index">
+            <element name="clouds"/>
+        </index>
+        <index name="index2">
+            <element name="group"/>
+        </index>
+    </element>
+</database>

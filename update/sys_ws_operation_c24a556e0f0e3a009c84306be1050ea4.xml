@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_ws_operation">
+    <sys_ws_operation action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <consumes>application/json,application/xml,text/xml</consumes>
+        <consumes_customized>false</consumes_customized>
+        <default_operation_uri/>
+        <enforce_acl>6e45cd1ddb733200b9047d9ebf9619c1</enforce_acl>
+        <http_method>POST</http_method>
+        <name>Deactivate</name>
+        <operation_script><![CDATA[(function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
+
+	var utils = new x_moda_morpheus_ca.Utils();
+	var data = request.body.data;
+		
+	// Handle the layouts
+	for(var i=0; i < data.layoutIds.length; i++) {
+		var layoutId = data.layoutIds[i];
+		var tmpLayoutIdVar = utils.getRecord('item_option_new', {default_value: layoutId.toString()});
+		if (tmpLayoutIdVar.sys_id) {
+			var catItemSysId = tmpLayoutIdVar.cat_item.sys_id;
+			var catItem = utils.getRecord('sc_cat_item', {sys_id: catItemSysId});
+			if(catItem.sys_id) {
+				catItem.active = false;
+				catItem.update();
+			}
+		} else {
+			gs.info('No layout found with id:' + layoutId + ', skipping deactivate');
+		}
+	}
+	
+	// Handle the zones
+	for(var i=0; i < data.zoneIds.length; i++) {
+		var zoneId = data.zoneIds[i];
+		var grCloud = new GlideRecord('x_moda_morpheus_ca_clouds');
+		grCloud.addQuery('external_id', zoneId);
+		grCloud.setLimit(1);
+		grCloud.query();
+		if(grCloud.next()) {
+			grCloud.deleteRecord();
+		} else {
+			gs.info('No cloud found with id:' + zoneId + ', skipping deactivate');
+		}
+	}
+
+})(request, response);]]></operation_script>
+        <operation_uri>/api/x_moda_morpheus_ca/sync_catalog/deactivate</operation_uri>
+        <produces>application/json,application/xml,text/xml</produces>
+        <produces_customized>false</produces_customized>
+        <relative_path>/deactivate</relative_path>
+        <request_example>{&#13;
+	"layoutIds": [51,52],&#13;
+	"zoneIds": [3]&#13;
+}</request_example>
+        <requires_acl_authorization>true</requires_acl_authorization>
+        <requires_authentication>true</requires_authentication>
+        <short_description>Deactivates the layouts specified and removes any clouds specified</short_description>
+        <sys_class_name>sys_ws_operation</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-04-13 17:16:10</sys_created_on>
+        <sys_customer_update>false</sys_customer_update>
+        <sys_id>c24a556e0f0e3a009c84306be1050ea4</sys_id>
+        <sys_mod_count>9</sys_mod_count>
+        <sys_name>Deactivate</sys_name>
+        <sys_package display_value="Morpheus Catalog" source="x_moda_morpheus_ca">8d8b6bbf0ff07e009c84306be1050e67</sys_package>
+        <sys_policy/>
+        <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+        <sys_scope display_value="Morpheus Catalog">8d8b6bbf0ff07e009c84306be1050e67</sys_scope>
+        <sys_update_name>sys_ws_operation_c24a556e0f0e3a009c84306be1050ea4</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-07-05 18:16:02</sys_updated_on>
+        <web_service_definition display_value="Sync Catalog">d6f827270fbdf2009c84306be1050ef4</web_service_definition>
+        <web_service_version/>
+    </sys_ws_operation>
+</record_update>

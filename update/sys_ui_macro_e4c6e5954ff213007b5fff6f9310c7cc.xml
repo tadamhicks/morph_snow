@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_ui_macro">
+    <sys_ui_macro action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <category>general</category>
+        <description/>
+        <media_type/>
+        <name>ValidateCredentials</name>
+        <scoped_name>x_moda_morpheus_ca_ValidateCredentials</scoped_name>
+        <sys_class_name>sys_ui_macro</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2018-06-18 19:59:38</sys_created_on>
+        <sys_customer_update>false</sys_customer_update>
+        <sys_id>e4c6e5954ff213007b5fff6f9310c7cc</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>ValidateCredentials</sys_name>
+        <sys_package display_value="Morpheus Catalog" source="x_moda_morpheus_ca">8d8b6bbf0ff07e009c84306be1050e67</sys_package>
+        <sys_policy/>
+        <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+        <sys_scope display_value="Morpheus Catalog">8d8b6bbf0ff07e009c84306be1050e67</sys_scope>
+        <sys_update_name>sys_ui_macro_e4c6e5954ff213007b5fff6f9310c7cc</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2018-06-18 19:59:38</sys_updated_on>
+        <xml><![CDATA[<?xml version="1.0" encoding="utf-8" ?>
+<j:jelly trim="false" xmlns:j="jelly:core" xmlns:g="glide" xmlns:j2="null" xmlns:g2="null">
+  <g:evaluate var="jvar_credentials_error_msg">
+  // Attempt to authenticate to Morpheus
+  var errorMessage = 'Error validating user credentials.  Verify credentials, URL, and route to host.';
+  var validCredentials = false;
+  try {
+    var r = new sn_ws.RESTMessageV2('x_moda_morpheus_ca.Morpheus Authenticate', 'post');
+    var username = gs.getProperty('x_moda_morpheus_ca.morpheus_username');
+    var url = gs.getProperty('x_moda_morpheus_ca.morpheus_url');
+    var password = gs.getProperty('x_moda_morpheus_ca.morpheus_password');
+
+    var haveCredentialProps = false;
+    if(username != '') {
+      if(password != ''){
+        if(url != ''){
+          haveCredentialProps = true;
+        }
+      }
+    }
+    if(haveCredentialProps) {
+        r.setStringParameterNoEscape('username', username);
+        r.setStringParameterNoEscape('url', url);
+        r.setStringParameterNoEscape('password', password);
+
+        var response = r.executeAsync();
+        response.waitForResponse(60);
+        var responseBody = response.getBody();
+        var parser = new global.JSON();
+        var jsonBody = parser.decode(responseBody);
+        var httpStatus = response.getStatusCode();
+        var accessToken = jsonBody['access_token'];
+        if(accessToken != '') {
+          if(accessToken != undefined){
+            gs.info('Credentials were validated against Morpheus'); 
+            errorMessage = '';
+          }
+        }
+    } else {
+      // Must be first time insert.. ignore validation for now
+      errorMessage = '';
+    }
+  }
+  catch(ex) {
+    gs.error(errorMessage + ex);
+  }
+  
+  errorMessage;
+  </g:evaluate>
+  <j:if test="${jvar_credentials_error_msg != ''}">
+    <div>
+      <div>
+        <h2 class="sr-only">Notifications</h2>
+        <div class="outputmsg_div">
+          <div class="outputmsg outputmsg_error notification notification-error">
+            <span class="notification-icon icon-info">
+              <span class="sr-only">Error Message</span>
+            </span>
+            <div class="outputmsg_text">${jvar_credentials_error_msg}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </j:if>
+</j:jelly>]]></xml>
+    </sys_ui_macro>
+</record_update>

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_ws_operation">
+    <sys_ws_operation action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <consumes>application/json,application/xml,text/xml</consumes>
+        <consumes_customized>false</consumes_customized>
+        <default_operation_uri/>
+        <enforce_acl>6e45cd1ddb733200b9047d9ebf9619c1</enforce_acl>
+        <http_method>POST</http_method>
+        <name>POST</name>
+        <operation_script><![CDATA[(function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
+	var data = request.body.dataString;
+	gs.info('Received Sync Catalog request with payload: ' + data);
+
+	// Create the record.. triggers the sync workflow to occur
+	var gr = new GlideRecord('x_moda_morpheus_ca_sync_payload');
+	gr.payload = data;
+	gr.insert();
+	
+})(request, response);]]></operation_script>
+        <operation_uri>/api/x_moda_morpheus_ca/sync_catalog</operation_uri>
+        <produces>application/json,application/xml,text/xml</produces>
+        <produces_customized>false</produces_customized>
+        <relative_path>/</relative_path>
+        <request_example>{&#13;
+	"instanceTypes": [&#13;
+		{&#13;
+			"id": 8,&#13;
+			"layouts": [&#13;
+				{&#13;
+					"id": 51&#13;
+				}&#13;
+			]&#13;
+		}&#13;
+	],&#13;
+	"sites": [&#13;
+		{&#13;
+			"id": 1,&#13;
+			"name": "amazon group",&#13;
+			"zones": [&#13;
+				{&#13;
+					"id": 1&#13;
+				}&#13;
+			]&#13;
+		}&#13;
+	]&#13;
+}</request_example>
+        <requires_acl_authorization>true</requires_acl_authorization>
+        <requires_authentication>true</requires_authentication>
+        <short_description/>
+        <sys_class_name>sys_ws_operation</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-04-04 20:01:04</sys_created_on>
+        <sys_customer_update>false</sys_customer_update>
+        <sys_id>454bafa30fbdf2009c84306be1050e7c</sys_id>
+        <sys_mod_count>12</sys_mod_count>
+        <sys_name>POST</sys_name>
+        <sys_package display_value="Morpheus Catalog" source="x_moda_morpheus_ca">8d8b6bbf0ff07e009c84306be1050e67</sys_package>
+        <sys_policy/>
+        <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+        <sys_scope display_value="Morpheus Catalog">8d8b6bbf0ff07e009c84306be1050e67</sys_scope>
+        <sys_update_name>sys_ws_operation_454bafa30fbdf2009c84306be1050e7c</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-07-05 18:16:22</sys_updated_on>
+        <web_service_definition display_value="Sync Catalog">d6f827270fbdf2009c84306be1050ef4</web_service_definition>
+        <web_service_version/>
+    </sys_ws_operation>
+</record_update>

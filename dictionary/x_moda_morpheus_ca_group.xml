@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<database>
+    <element label="Group" max_length="40" name="x_moda_morpheus_ca_group" type="collection">
+        <element label="External ID" max_length="40" name="external_id" type="string"/>
+        <element label="Name" max_length="255" name="name" type="string"/>
+    </element>
+</database>

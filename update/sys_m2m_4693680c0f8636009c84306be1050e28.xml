@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_m2m">
+    <sys_m2m action="INSERT_OR_UPDATE">
+        <from_table>x_moda_morpheus_ca_clouds</from_table>
+        <m2m_from_field>clouds</m2m_from_field>
+        <m2m_from_label>Provision Types</m2m_from_label>
+        <m2m_table>x_moda_morpheus_ca_m2m_provision_types_clouds</m2m_table>
+        <m2m_to_field>provision_type</m2m_to_field>
+        <m2m_to_label>Clouds</m2m_to_label>
+        <sys_class_name>sys_m2m</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-04-05 18:44:25</sys_created_on>
+        <sys_customer_update>true</sys_customer_update>
+        <sys_id>4693680c0f8636009c84306be1050e28</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>x_moda_morpheus_ca_m2m_provision_types_clouds</sys_name>
+        <sys_package display_value="Morpheus Catalog" source="x_moda_morpheus_ca">8d8b6bbf0ff07e009c84306be1050e67</sys_package>
+        <sys_policy/>
+        <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+        <sys_scope display_value="Morpheus Catalog">8d8b6bbf0ff07e009c84306be1050e67</sys_scope>
+        <sys_update_name>sys_m2m_4693680c0f8636009c84306be1050e28</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-04-05 18:44:25</sys_updated_on>
+        <to_table>x_moda_morpheus_ca_provision_type</to_table>
+    </sys_m2m>
+</record_update>

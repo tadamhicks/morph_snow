@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update>
+    <sys_documentation element="" label="Service Plans" language="en" table="x_moda_morpheus_ca_service_plans">
+        <sys_documentation action="INSERT_OR_UPDATE">
+            <element/>
+            <help/>
+            <hint/>
+            <label>Service Plans</label>
+            <language>en</language>
+            <name>x_moda_morpheus_ca_service_plans</name>
+            <plural>Service Plans</plural>
+            <sys_class_name>sys_documentation</sys_class_name>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2017-02-16 19:54:50</sys_created_on>
+            <sys_customer_update>false</sys_customer_update>
+            <sys_id>478729e40f05be009c84306be1050e5b</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_name>Service Plans</sys_name>
+            <sys_package display_value="Morpheus Catalog" source="x_moda_morpheus_ca">8d8b6bbf0ff07e009c84306be1050e67</sys_package>
+            <sys_policy/>
+            <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+            <sys_scope display_value="Morpheus Catalog">8d8b6bbf0ff07e009c84306be1050e67</sys_scope>
+            <sys_update_name>sys_documentation_x_moda_morpheus_ca_service_plans__en</sys_update_name>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2017-02-16 19:54:50</sys_updated_on>
+            <url/>
+            <url_target/>
+        </sys_documentation>
+    </sys_documentation>
+</record_update>

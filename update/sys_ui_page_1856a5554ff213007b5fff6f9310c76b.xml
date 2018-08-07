@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_ui_page">
+    <sys_ui_page action="INSERT_OR_UPDATE">
+        <category>general</category>
+        <client_script><![CDATA[var url = new GlideURL();
+url.setEncode(false);
+url.setFromCurrent();
+url.deleteParam('sysparm_record_scope');
+$('referer').value = url.getURL();
+
+function showPropertyContext(event, id) {
+     var mcm = new GwtContextMenu('context_menu_property_' +id);
+     mcm.clear();
+     mcm.addURL("${gs.getMessage('Edit Property')}", "sys_properties.do?sysparm_query=name=" + id, "gsft_main");
+     mcm.addHref("Copy Name To Clipboard", "copyToClipboard('" + id + "')");
+     return contextShow(event, mcm.getID(), 500, 0, 0);
+}
+
+function upgradeColor(id) {
+    var d = $(id);
+    var e = $('example.' + id);
+    if (!d || !e)
+        return;
+
+    var color = d.value;
+    try {
+        e.style.backgroundColor = color;
+    } catch (ex) {
+        alert('Invalid color: ' + color);
+        d.value = '';
+        e.style.backgroundColor = 'white';
+    }
+}]]></client_script>
+        <description/>
+        <direct>false</direct>
+        <endpoint>x_moda_morpheus_ca_morpheus_properties_ui.do</endpoint>
+        <html><![CDATA[<?xml version="1.0" encoding="utf-8" ?>
+<j:jelly trim="false" xmlns:j="jelly:core" xmlns:g="glide" xmlns:j2="null" xmlns:g2="null">
+    <g:inline template="output_messages2.xml"/>
+  <g:macro_invoke macro="x_moda_morpheus_ca_ValidateCredentials" />  
+    <form id="system_properties_ui.do" name="system_properties" style="DISPLAY: inline" action="system_properties_update.do" method="POST">
+    <j:if test="${!empty(sysparm_transaction_scope)}">
+      <input type="HIDDEN" id="sysparm_transaction_scope" name="sysparm_transaction_scope" value="${sysparm_transaction_scope}"/>
+    </j:if> 
+    <j:if test="${!empty(sysparm_record_scope)}">
+      <input type="HIDDEN" id="sysparm_record_scope" name="sysparm_record_scope" value="${sysparm_record_scope}"/>
+    </j:if>       
+        <input name="sys_action" type="HIDDEN" value="hello"/>
+        <input name="referer" id="referer" type="HIDDEN" value=""/>
+    <input id="section_form_id" type="HIDDEN" value="system_properties_ui.do"/>
+    <div class="navbar navbar-default" role="toolbar">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <g:evaluate jelly="true" var="jvar_title">
+            var cat = new GlideRecord("sys_app_module");
+            var title;
+            cat.addQuery("sys_name", jelly.sysparm_title);
+            cat.query();
+            if (cat.next())
+              title = cat.getDisplayValue("title");
+            else
+              title = gs.getMessage(jelly.sysparm_title);
+            title;
+
+          </g:evaluate>
+          <h1 class="navbar-title">
+            <span class="caption">${jvar_title}</span>
+          </h1>
+        </div>
+        <div class="nav navbar-right">
+          <button class="btn btn-primary" type="submit" name="action">${gs.getMessage("Save")}</button>
+        </div>
+      </div>
+    </div>
+    <div class="container-fluid">
+      <table role="application" class="table-properties">
+        <g2:system_properties_categorized category="${sysparm_category}"/>
+      </table>
+
+      <button class="btn btn-primary" type="submit" name="action">${gs.getMessage("Save")}</button>
+    </div>
+    </form>
+</j:jelly>]]></html>
+        <name>morpheus_properties_ui</name>
+        <processing_script/>
+        <sys_class_name>sys_ui_page</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2018-06-18 19:57:51</sys_created_on>
+        <sys_customer_update>false</sys_customer_update>
+        <sys_id>1856a5554ff213007b5fff6f9310c76b</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_name>morpheus_properties_ui</sys_name>
+        <sys_package display_value="Morpheus Catalog" source="x_moda_morpheus_ca">8d8b6bbf0ff07e009c84306be1050e67</sys_package>
+        <sys_policy/>
+        <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+        <sys_scope display_value="Morpheus Catalog">8d8b6bbf0ff07e009c84306be1050e67</sys_scope>
+        <sys_update_name>sys_ui_page_1856a5554ff213007b5fff6f9310c76b</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2018-07-02 18:58:26</sys_updated_on>
+    </sys_ui_page>
+</record_update>

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sysauto_script">
+    <sysauto_script action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <condition/>
+        <conditional>false</conditional>
+        <name>Sync Morpheus Catalog</name>
+        <run_as display_value="System Administrator">6816f79cc0a8016401c5a33be04be441</run_as>
+        <run_as_tz/>
+        <run_dayofmonth>1</run_dayofmonth>
+        <run_dayofweek>1</run_dayofweek>
+        <run_period/>
+        <run_start>2017-04-28 22:18:52</run_start>
+        <run_time>1970-01-01 08:00:00</run_time>
+        <run_type>daily</run_type>
+        <script><![CDATA[// Always sync the last payload (if there is one)
+gs.info('Querying for last payload');
+var gr = new GlideRecord('x_moda_morpheus_ca_sync_payload');
+gr.orderByDesc('sys_created_on');
+gr.query();
+var payload;
+if(gr.next()) {
+	gs.info('Found payload at: ' + gr.sys_created_on + ', syncing now...');
+	var syncUtils = new x_moda_morpheus_ca.SyncUtils();
+	syncUtils.sync(gr);
+	gs.info('Sync complete');
+} else {
+	gs.info('No morpheus catalog payload found.. not syncing');
+}]]></script>
+        <sys_class_name>sysauto_script</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-04-28 22:23:58</sys_created_on>
+        <sys_customer_update>false</sys_customer_update>
+        <sys_id>496133570f1672409c84306be1050e4c</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_name>Sync Morpheus Catalog</sys_name>
+        <sys_package display_value="Morpheus Catalog" source="x_moda_morpheus_ca">8d8b6bbf0ff07e009c84306be1050e67</sys_package>
+        <sys_policy/>
+        <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+        <sys_scope display_value="Morpheus Catalog">8d8b6bbf0ff07e009c84306be1050e67</sys_scope>
+        <sys_update_name>sysauto_script_496133570f1672409c84306be1050e4c</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-04-28 22:34:29</sys_updated_on>
+        <upgrade_safe>false</upgrade_safe>
+    </sysauto_script>
+</record_update>

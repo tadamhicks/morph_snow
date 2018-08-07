@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<database>
+    <element label="Sync Payload" max_length="40" name="x_moda_morpheus_ca_sync_payload" type="collection">
+        <element label="Payload" max_length="2048" name="payload" type="string"/>
+    </element>
+</database>

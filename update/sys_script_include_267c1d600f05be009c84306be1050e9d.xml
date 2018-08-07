@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_moda_morpheus_ca.LookUpUtils</api_name>
+        <client_callable>true</client_callable>
+        <description/>
+        <name>LookUpUtils</name>
+        <script><![CDATA[var LookUpUtils = Class.create();
+LookUpUtils.prototype = {
+	initialize: function() {
+	},
+	
+	type: 'LookUpUtils',
+	
+	getLookupValuesLayout: function(layoutId, type){
+		gs.debug('getLookupValuesLayout: layoutId:' + layoutId + ', type:' + type);
+		var lookupValuesList = [];
+		
+		var lookupValue = new GlideRecord('x_moda_morpheus_ca_lookup_values_layout');
+		lookupValue.addQuery('layoutid', layoutId);
+		lookupValue.addQuery('type',type);
+		lookupValue.query();
+
+		while(lookupValue.next()) {
+			lookupValuesList.push(lookupValue.sys_id.toString());
+		}
+		
+		return 'sys_idIN' + lookupValuesList;
+	},
+	
+	getLookupValues: function(cloud, provisionType, type){
+		gs.debug('cloud:' + cloud + ', provisionType:' + provisionType + ', type:' + type);
+		var lookupValuesList = [];
+		
+		if(cloud) {
+			var grProvisionType = new GlideRecord('x_moda_morpheus_ca_provision_type');
+			grProvisionType.addQuery('externalid', provisionType);
+			grProvisionType.query();
+			grProvisionType.next();
+
+			var lookupValue = new GlideRecord('x_moda_morpheus_ca_lookup_values_cloud');
+			lookupValue.addQuery('cloud',cloud);
+			lookupValue.addQuery('type',type);
+			lookupValue.addQuery('provision_type',grProvisionType.sys_id);
+			lookupValue.query();
+
+			while(lookupValue.next()) {
+				lookupValuesList.push(lookupValue.sys_id.toString());
+			}
+		}
+		
+		return 'sys_idIN' + lookupValuesList;
+	},
+	
+	getCloudsForGroups: function(group, provisionType) {
+		gs.debug("group: " + group + "provisionType: " + provisionType);
+
+		var sysIds = [];
+		var grGroupsToClouds = new GlideRecord("x_moda_morpheus_ca_m2m_clouds_groups");
+		grGroupsToClouds.addQuery('group', group);
+		grGroupsToClouds.query();
+		
+		var grCloud = new GlideRecord("x_moda_morpheus_ca_clouds");
+		var grProvisionType = new GlideRecord("x_moda_morpheus_ca_provision_type");
+		grProvisionType.get('externalid', provisionType);
+
+		while (grGroupsToClouds.next()) {
+			if (grCloud.get('sys_id', grGroupsToClouds.getValue('clouds'))) {
+		
+				var grCloudToProvTypes = new GlideRecord("x_moda_morpheus_ca_m2m_provision_types_clouds");
+				grCloudToProvTypes.addQuery('clouds', grCloud.sys_id);
+				grCloudToProvTypes.addQuery('provision_type', grProvisionType.sys_id);
+				grCloudToProvTypes.query();
+
+				if(grCloudToProvTypes.next()) {
+					sysIds.push(grCloud.sys_id.toString());
+				}
+			}
+		}
+		return 'sys_idIN' + sysIds;
+	},
+	
+	getNetworksForCloud: function(cloud, provisionType){
+		gs.debug('getNetworksForCloud: ' + cloud + ', ' + provisionType);
+		var networkList = [];
+		
+		if(cloud) {
+			var grProvisionType = new GlideRecord('x_moda_morpheus_ca_provision_type');
+			grProvisionType.addQuery('externalid', provisionType);
+			grProvisionType.query();
+			grProvisionType.next();
+
+			var networks = new GlideRecord('x_moda_morpheus_ca_network');
+			networks.addQuery('cloud', cloud);
+			networks.addQuery('provision_type', grProvisionType.sys_id);
+			networks.query();
+
+			while(networks.next()) {
+				networkList.push(networks.sys_id.toString());
+			}
+		}
+		
+		return 'sys_idIN' + networkList;
+	},
+	
+	getDatastoresForCloud: function(cloud, provisionType){
+		gs.debug('getDatastoresForCloud: ' + cloud + ', ' + provisionType);
+		var datastoreList = [];
+		
+		if(cloud) {
+			var grProvisionType = new GlideRecord('x_moda_morpheus_ca_provision_type');
+			grProvisionType.addQuery('externalid', provisionType);
+			grProvisionType.query();
+			grProvisionType.next();
+
+			var datastores = new GlideRecord('x_moda_morpheus_ca_datastore');
+			datastores.addQuery('cloud', cloud);
+			datastores.addQuery('provision_type', grProvisionType.sys_id);
+			datastores.query();
+
+			while(datastores.next()) {
+				datastoreList.push(datastores.sys_id.toString());
+			}
+		}
+		
+		return 'sys_idIN' + datastoreList;
+	},
+	
+	getServicePlans: function(cloud, provisionType){
+		gs.debug('getServicePlans: provisionType:' + provisionType + ', cloud: ' + cloud);
+		var planList = [];
+		
+		if(cloud) {
+			var grProvisionType = new GlideRecord('x_moda_morpheus_ca_provision_type');
+			grProvisionType.addQuery('externalid', provisionType);
+			grProvisionType.query();
+			grProvisionType.next();
+
+			var plans = new GlideRecord('x_moda_morpheus_ca_service_plans');
+			plans.addQuery('provision_type', grProvisionType.sys_id);
+			// Only scope service plans to regions for Azure.. kind of a hack!
+			if(grProvisionType.externalid == 'azure' && cloud.region_code != '' && typeof(cloud.region_code) != 'undefined') {
+				plans.addQuery('region_code', cloud.region_code);
+			}
+
+			plans.query();
+
+			while(plans.next()) {
+				planList.push(plans.sys_id.toString());
+			}
+		}
+		
+		return 'sys_idIN' + planList;
+	},
+	
+	fetchAccessToken: function() {
+		try {
+			var r = new sn_ws.RESTMessageV2('x_moda_morpheus_ca.Morpheus Authenticate', 'post');
+			r.setStringParameterNoEscape('username', gs.getProperty('x_moda_morpheus_ca.morpheus_username'));
+			r.setStringParameterNoEscape('url', gs.getProperty('x_moda_morpheus_ca.morpheus_url'));
+			r.setStringParameterNoEscape('password', gs.getProperty('x_moda_morpheus_ca.morpheus_password'));
+
+			var response = r.execute();
+			var responseBody = response.getBody();
+			var parser = new global.JSON();
+			var jsonBody = parser.decode(responseBody);
+			var httpStatus = response.getStatusCode();
+
+			return jsonBody['access_token'];
+		}
+		catch(ex) {
+			gs.error('Error fetching access token.  Verify system properties for auth settings and route to host.' + ex);
+		}
+		return '';
+	}
+};]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-02-16 19:12:31</sys_created_on>
+        <sys_customer_update>false</sys_customer_update>
+        <sys_id>267c1d600f05be009c84306be1050e9d</sys_id>
+        <sys_mod_count>50</sys_mod_count>
+        <sys_name>LookUpUtils</sys_name>
+        <sys_package display_value="Morpheus Catalog" source="x_moda_morpheus_ca">8d8b6bbf0ff07e009c84306be1050e67</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+        <sys_scope display_value="Morpheus Catalog">8d8b6bbf0ff07e009c84306be1050e67</sys_scope>
+        <sys_update_name>sys_script_include_267c1d600f05be009c84306be1050e9d</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2018-07-02 18:30:11</sys_updated_on>
+    </sys_script_include>
+</record_update>

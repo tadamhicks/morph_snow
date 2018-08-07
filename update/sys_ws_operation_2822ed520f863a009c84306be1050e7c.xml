@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_ws_operation">
+    <sys_ws_operation action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <consumes>application/json,application/xml,text/xml</consumes>
+        <consumes_customized>false</consumes_customized>
+        <default_operation_uri/>
+        <enforce_acl>6e45cd1ddb733200b9047d9ebf9619c1</enforce_acl>
+        <http_method>GET</http_method>
+        <name>GET</name>
+        <operation_script><![CDATA[(function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
+
+	var body = {};
+	
+	var utils = new x_moda_morpheus_ca.Utils();
+	body.version = utils.getApplicationVersion();
+	response.setBody(body);
+
+})(request, response);]]></operation_script>
+        <operation_uri>/api/x_moda_morpheus_ca/ping</operation_uri>
+        <produces>application/json,application/xml,text/xml</produces>
+        <produces_customized>false</produces_customized>
+        <relative_path>/</relative_path>
+        <request_example/>
+        <requires_acl_authorization>true</requires_acl_authorization>
+        <requires_authentication>true</requires_authentication>
+        <short_description/>
+        <sys_class_name>sys_ws_operation</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-04-12 23:04:07</sys_created_on>
+        <sys_customer_update>false</sys_customer_update>
+        <sys_id>2822ed520f863a009c84306be1050e7c</sys_id>
+        <sys_mod_count>7</sys_mod_count>
+        <sys_name>GET</sys_name>
+        <sys_package display_value="Morpheus Catalog" source="x_moda_morpheus_ca">8d8b6bbf0ff07e009c84306be1050e67</sys_package>
+        <sys_policy/>
+        <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+        <sys_scope display_value="Morpheus Catalog">8d8b6bbf0ff07e009c84306be1050e67</sys_scope>
+        <sys_update_name>sys_ws_operation_2822ed520f863a009c84306be1050e7c</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-07-13 15:49:59</sys_updated_on>
+        <web_service_definition display_value="Ping">1ee121920f863a009c84306be1050e20</web_service_definition>
+        <web_service_version/>
+    </sys_ws_operation>
+</record_update>
